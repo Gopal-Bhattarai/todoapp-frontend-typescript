@@ -1,4 +1,4 @@
-import { FC, ReactElement, useState, useEffect } from "react";
+import { FC, ReactElement, useState, useEffect, useContext } from "react";
 import {
   Box,
   Typography,
@@ -17,6 +17,7 @@ import { Priority } from "./enums/Priority";
 import { useMutation } from "@tanstack/react-query";
 import { sendApiRequest } from "../../helpers/sendApiRequest";
 import { ICreateTask } from "../taskArea/interfaces/ICreateTask";
+import { TaskStatusChangedContext } from "../../context";
 
 export const CreateTaskForm: FC = (): ReactElement => {
   const [title, setTitle] = useState<string | undefined>(undefined);
@@ -26,6 +27,7 @@ export const CreateTaskForm: FC = (): ReactElement => {
   const [priority, setPriority] = useState<string>(Priority.normal);
   const [showSuccess, setShowSuccess] = useState<boolean>(false);
 
+  const tasksUpdatedContext = useContext(TaskStatusChangedContext);
   //create task mutation
   const createTaskMutation = useMutation((data: ICreateTask) =>
     sendApiRequest("http://localhost:3200/tasks", "POST", data)
@@ -51,6 +53,7 @@ export const CreateTaskForm: FC = (): ReactElement => {
   useEffect(() => {
     if (createTaskMutation.isSuccess) {
       setShowSuccess(true);
+      tasksUpdatedContext.toggle();
     }
 
     const successTimeout = setTimeout(() => {
@@ -60,6 +63,7 @@ export const CreateTaskForm: FC = (): ReactElement => {
     return () => {
       clearTimeout(successTimeout);
     };
+    // eslint-disable-next-line
   }, [createTaskMutation.isSuccess]);
 
   return (

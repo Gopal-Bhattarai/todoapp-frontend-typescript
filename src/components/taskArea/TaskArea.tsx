@@ -1,20 +1,64 @@
-import { FC, ReactElement } from "react";
+import { FC, ReactElement, useEffect, useContext } from "react";
 import { Grid, Box, Alert, LinearProgress } from "@mui/material";
 import { format } from "date-fns";
 import { TaskCounter } from "../taskCounter/TaskCounter";
 import { Status } from "../createTaskForm/enums/Status";
 import { Task } from "../task/task";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { sendApiRequest } from "../../helpers/sendApiRequest";
 import { ITaskApi } from "./interfaces/ITaskApi";
+import { IUpdateTask } from "../createTaskForm/interfaces/IUpdateTask";
+import { countTasks } from "./helpers/countTasks";
+import { TaskStatusChangedContext } from "../../context";
 
 export const TaskArea: FC = (): ReactElement => {
+  const tasksUpdatedContext = useContext(TaskStatusChangedContext);
+
   const { error, isLoading, data, refetch } = useQuery(["tasks"], async () => {
     return await sendApiRequest<ITaskApi[]>(
       "http://localhost:3200/tasks",
       "GET"
     );
   });
+
+  //update task mutation
+  const updateTaskMutation = useMutation((data: IUpdateTask) =>
+    sendApiRequest("http://localhost:3200/tasks", "PUT", data)
+  );
+
+  useEffect(() => {
+    refetch();
+    // eslint-disable-next-line
+  }, [tasksUpdatedContext.updated]);
+
+  useEffect(() => {
+    if (updateTaskMutation.isSuccess) {
+      tasksUpdatedContext.toggle();
+    }
+    // eslint-disable-next-line
+  }, [updateTaskMutation.isSuccess]);
+
+  function onStatusChangeHandler(
+    e: React.ChangeEvent<HTMLInputElement>,
+    id: string
+  ) {
+    updateTaskMutation.mutate({
+      id,
+      status: e.target.checked ? Status.inProgress : Status.todo,
+    });
+  }
+
+  function markCompleteHandler(
+    e:
+      | React.MouseEvent<HTMLButtonElement>
+      | React.MouseEvent<HTMLAnchorElement>,
+    id: string
+  ) {
+    updateTaskMutation.mutate({
+      id,
+      status: Status.completed,
+    });
+  }
 
   return (
     <Grid item md={8} px={4}>
@@ -33,9 +77,18 @@ export const TaskArea: FC = (): ReactElement => {
           xs={12}
           mb={8}
         >
-          <TaskCounter count={2} status={Status.todo} />
-          <TaskCounter count={5} status={Status.inProgress} />
-          <TaskCounter count={3} status={Status.completed} />
+          <TaskCounter
+            count={data ? countTasks(data, Status.todo) : undefined}
+            status={Status.todo}
+          />
+          <TaskCounter
+            count={data ? countTasks(data, Status.inProgress) : undefined}
+            status={Status.inProgress}
+          />
+          <TaskCounter
+            count={data ? countTasks(data, Status.completed) : undefined}
+            status={Status.completed}
+          />
         </Grid>
         <Grid item display="flex" flexDirection="column" xs={10} md={8}>
           <>
@@ -57,17 +110,23 @@ export const TaskArea: FC = (): ReactElement => {
             ) : (
               Array.isArray(data) &&
               data.length > 0 &&
-              data.map((each, index) => (
-                <Task
-                  key={each.id + index}
-                  id={each.id}
-                  title={each.title}
-                  description={each.description}
-                  date={new Date(each.date)}
-                  priority={each.priority}
-                  status={each.status}
-                />
-              ))
+              data.map((each, index) => {
+                return each.status !== Status.completed ? (
+                  <Task
+                    key={each.id + index}
+                    id={each.id}
+                    title={each.title}
+                    description={each.description}
+                    date={new Date(each.date)}
+                    priority={each.priority}
+                    status={each.status}
+                    onStatusChange={onStatusChangeHandler}
+                    onClick={markCompleteHandler}
+                  />
+                ) : (
+                  false
+                );
+              })
             )}
           </>
         </Grid>
