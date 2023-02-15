@@ -11,6 +11,8 @@ import PropTypes from 'prop-types'
 
 export const TaskFooter: FC<ITaskFooter> = (props): ReactElement => {
   const {
+    id,
+    status,
     onStatusChange = (e) => console.log(e),
     onClick = (e) => console.log(e),
   } = props;
@@ -31,7 +33,7 @@ export const TaskFooter: FC<ITaskFooter> = (props): ReactElement => {
         sx={{
           color: "#ffffff",
         }}
-        onClick={(e)=>onClick(e)}
+        onClick={(e) => onClick(e)}
       >
         Mark Complete
       </Button>
@@ -39,8 +41,9 @@ export const TaskFooter: FC<ITaskFooter> = (props): ReactElement => {
   );
 };
 
-
 TaskFooter.propTypes = {
-    onStatusChange: PropTypes.func,
-    onClick: PropTypes.func
-}
+  onStatusChange: PropTypes.func,
+  onClick: PropTypes.func,
+  id: PropTypes.string.isRequired,
+  status: PropTypes.string,
+};
